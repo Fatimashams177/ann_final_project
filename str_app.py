@@ -1,64 +1,69 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 from joblib import load
 
-# Load trained model
+# Load the trained model
 model = load("random_forest_model.joblib")
 
-# Initialize history
+# Feature list (exactly as used during training)
+feature_order = [
+    'area', 'bedrooms', 'bathrooms', 'stories',
+    'mainroad_yes', 'guestroom_yes', 'basement_yes',
+    'hotwaterheating_yes', 'airconditioning_yes',
+    'parking', 'prefarea_yes'
+]
+
+# Initialize prediction history
 if 'history' not in st.session_state:
     st.session_state.history = []
 
-st.title("Housing Price Prediction App")
-st.write("Enter housing details to estimate the price.")
+st.title("Housing Price Predictor")
+st.write("Enter the house details to estimate its market price.")
 
-# User inputs
+# Input fields
 area = st.number_input("Area (sq ft)", 200, 10000, value=1200)
-bedrooms = st.selectbox("Number of Bedrooms", [1, 2, 3, 4, 5])
-bathrooms = st.selectbox("Number of Bathrooms", [1, 2, 3])
-stories = st.selectbox("Number of Stories", [1, 2, 3])
+bedrooms = st.selectbox("Bedrooms", [1, 2, 3, 4, 5])
+bathrooms = st.selectbox("Bathrooms", [1, 2, 3])
+stories = st.selectbox("Stories", [1, 2, 3])
 mainroad = st.selectbox("Main Road Access", ["yes", "no"])
 guestroom = st.selectbox("Guest Room", ["yes", "no"])
 basement = st.selectbox("Basement", ["yes", "no"])
 hotwaterheating = st.selectbox("Hot Water Heating", ["yes", "no"])
 airconditioning = st.selectbox("Air Conditioning", ["yes", "no"])
-parking = st.slider("Number of Parking Spaces", 0, 5, 1)
+parking = st.slider("Parking Spaces", 0, 5, value=1)
 prefarea = st.selectbox("Preferred Area", ["yes", "no"])
 
-# Manual feature list (must match what the model was trained on)
-feature_order = [
-    "area", "bedrooms", "bathrooms", "stories",
-    "mainroad_yes", "guestroom_yes", "basement_yes",
-    "hotwaterheating_yes", "airconditioning_yes",
-    "parking", "prefarea_yes"
-]
-
-# Build input dict
+# Create input dictionary with binary encoding for categorical variables
 input_dict = {
-    "area": area,
-    "bedrooms": bedrooms,
-    "bathrooms": bathrooms,
-    "stories": stories,
-    "mainroad_yes": 1 if mainroad == "yes" else 0,
-    "guestroom_yes": 1 if guestroom == "yes" else 0,
-    "basement_yes": 1 if basement == "yes" else 0,
-    "hotwaterheating_yes": 1 if hotwaterheating == "yes" else 0,
-    "airconditioning_yes": 1 if airconditioning == "yes" else 0,
-    "parking": parking,
-    "prefarea_yes": 1 if prefarea == "yes" else 0,
+    'area': area,
+    'bedrooms': bedrooms,
+    'bathrooms': bathrooms,
+    'stories': stories,
+    'mainroad_yes': 1 if mainroad == 'yes' else 0,
+    'guestroom_yes': 1 if guestroom == 'yes' else 0,
+    'basement_yes': 1 if basement == 'yes' else 0,
+    'hotwaterheating_yes': 1 if hotwaterheating == 'yes' else 0,
+    'airconditioning_yes': 1 if airconditioning == 'yes' else 0,
+    'parking': parking,
+    'prefarea_yes': 1 if prefarea == 'yes' else 0,
 }
 
-# Convert to DataFrame and ensure correct feature order
-input_df = pd.DataFrame([[input_dict[col] for col in feature_order]], columns=feature_order)
+# Ensure the input DataFrame matches the training format
+input_df = pd.DataFrame([[input_dict[feat] for feat in feature_order]], columns=feature_order)
 
-# Predict
+# Make prediction
 if st.button("Predict Price"):
-    price = model.predict(input_df)[0]
-    st.success(f"Predicted Price: ₹{price:,.2f}")
-    st.session_state.history.append({"Input": input_dict, "Prediction": price})
+    try:
+        prediction = model.predict(input_df)[0]
+        st.success(f"Predicted House Price: ₹{prediction:,.2f}")
 
-# Show history
+        # Save to history
+        st.session_state.history.append({"Input": input_dict, "Predicted Price": prediction})
+
+    except Exception as e:
+        st.error(f"Prediction failed: {e}")
+
+# Show prediction history
 if st.checkbox("Show Prediction History"):
     if st.session_state.history:
         history_df = pd.DataFrame(st.session_state.history)
