@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 from joblib import load
 
-# Load trained model
+# Load the trained Random Forest model
 model = load("random_forest_model.joblib")
 
-# Exact feature list from training
+# Feature order (must exactly match training)
 feature_order = [
     'area', 'bedrooms', 'bathrooms', 'stories', 'parking',
     'mainroad_no', 'mainroad_yes',
@@ -19,29 +19,33 @@ feature_order = [
     'furnishingstatus_unfurnished'
 ]
 
-# Initialize history
+# Initialize history if not present
 if 'history' not in st.session_state:
     st.session_state.history = []
 
-st.title("Housing Price Prediction")
-st.write("Enter house details to get a price estimate.")
+# App UI
+st.title("Housing Price Prediction App")
+st.write("Fill in the details below to get an estimated price for a house.")
 
-# Inputs
-area = st.number_input("Area (sq ft)", 200, 10000, value=1200)
+# Numeric inputs
+area = st.number_input("Area (sq ft)", min_value=200, max_value=10000, value=1200)
 bedrooms = st.selectbox("Bedrooms", [1, 2, 3, 4, 5])
 bathrooms = st.selectbox("Bathrooms", [1, 2, 3])
 stories = st.selectbox("Stories", [1, 2, 3])
-parking = st.slider("Parking Spaces", 0, 5, 1)
+parking = st.slider("Parking Spaces", 0, 5, value=1)
 
+# Binary categorical inputs
 mainroad = st.radio("Main Road Access", ["yes", "no"])
 guestroom = st.radio("Guest Room", ["yes", "no"])
 basement = st.radio("Basement", ["yes", "no"])
 hotwaterheating = st.radio("Hot Water Heating", ["yes", "no"])
 airconditioning = st.radio("Air Conditioning", ["yes", "no"])
 prefarea = st.radio("Preferred Area", ["yes", "no"])
+
+# Multi-class categorical input
 furnishing = st.radio("Furnishing Status", ["furnished", "semi-furnished", "unfurnished"])
 
-# Create full input dict with all dummy columns
+# Prepare input dictionary with all required dummy columns
 input_dict = {
     'area': area,
     'bedrooms': bedrooms,
@@ -72,16 +76,16 @@ input_dict = {
     'furnishingstatus_unfurnished': 1 if furnishing == 'unfurnished' else 0
 }
 
-# Create input DataFrame
-input_df = pd.DataFrame([[input_dict[col] for col in feature_order]], columns=feature_order)
+# Ensure correct column order
+input_df = pd.DataFrame([[input_dict[feat] for feat in feature_order]], columns=feature_order)
 
-# Predict
+# Prediction
 if st.button("Predict Price"):
     prediction = model.predict(input_df)[0]
-    st.success(f"Predicted House Price: ₹{prediction:,.2f}")
+    st.success(f"Estimated Price: ₹{prediction:,.2f}")
     st.session_state.history.append({"Input": input_dict, "Predicted Price": prediction})
 
-# Show prediction history
+# Display prediction history
 if st.checkbox("Show Prediction History"):
     if st.session_state.history:
         st.dataframe(pd.DataFrame(st.session_state.history))
